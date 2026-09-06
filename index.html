@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Etsy Printify Manager — finishing sign-in</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 640px; margin: 48px auto; padding: 0 16px; color: #1c1f24; }
+      code, textarea { font-family: ui-monospace, Consolas, monospace; }
+      textarea { width: 100%; height: 72px; font-size: 13px; }
+      .btn { display: inline-block; padding: 8px 14px; border-radius: 6px; border: 1px solid #ccd; background: #fff; cursor: pointer; font: inherit; text-decoration: none; color: inherit; }
+      .btn.primary { background: #2b5fd9; color: #fff; border-color: #2b5fd9; }
+      .err { color: #c0392b; }
+      .muted { color: #5d6675; font-size: 14px; }
+    </style>
+  </head>
+  <body>
+    <h1>Almost done</h1>
+    <div id="content"><p class="muted">Reading the response from Etsy…</p></div>
+
+    <script>
+      // This page is intentionally static: no server, no secrets. It only forwards the one-time
+      // authorization code back to the desktop app via the etsyprintify:// protocol, and shows it as a
+      // fallback so you can paste it manually. The code is useless without the PKCE verifier held by the app.
+      (function () {
+        var q = new URLSearchParams(window.location.search);
+        var code = q.get('code');
+        var state = q.get('state');
+        var error = q.get('error');
+        var desc = q.get('error_description');
+        var el = document.getElementById('content');
+        function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+
+        if (error) {
+          el.innerHTML = '<p class="err"><strong>Etsy reported an error:</strong> ' + esc(error) + (desc ? ' — ' + esc(desc) : '') + '</p>' +
+            '<p class="muted">Close this tab and try connecting again from the app.</p>';
+          return;
+        }
+        if (!code) {
+          el.innerHTML = '<p class="err">No authorization code was found in this URL.</p>' +
+            '<p class="muted">Start the connection from the app (Settings → Connections → Connect Etsy).</p>';
+          return;
+        }
+        var deep = 'etsyprintify://oauth/callback?code=' + encodeURIComponent(code) + (state ? '&state=' + encodeURIComponent(state) : '');
+        var fullUrl = window.location.href;
+        el.innerHTML =
+          '<p>Opening <strong>Etsy Printify Manager</strong>… If nothing happens, click the button.</p>' +
+          '<p><a class="btn primary" id="open" href="' + esc(deep) + '">Open the app</a></p>' +
+          '<h3>Manual fallback</h3>' +
+          '<p class="muted">If the app did not open, copy this and paste it into Settings → Connections → "Complete":</p>' +
+          '<textarea id="code" readonly>' + esc(fullUrl) + '</textarea>' +
+          '<p><button class="btn" id="copy">Copy</button> <span id="copied" class="muted"></span></p>' +
+          '<p class="muted">You can close this tab afterwards. The code expires quickly and can be used only once.</p>';
+        document.getElementById('copy').onclick = function () {
+          var ta = document.getElementById('code');
+          ta.select();
+          try { navigator.clipboard.writeText(ta.value); document.getElementById('copied').textContent = 'Copied.'; } catch (e) { document.execCommand('copy'); }
+        };
+        setTimeout(function () { window.location.href = deep; }, 250);
+      })();
+    </script>
+  </body>
+</html>
